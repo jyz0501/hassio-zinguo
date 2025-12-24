@@ -1,5 +1,5 @@
 Zinguo 浴霸 Home Assistant 集成
-
+ 
 https://img.shields.io/badge/HACS-自定义-41BDF5.svg
 https://img.shields.io/github/release/jyz0501/hassio-zinguo.svg
 https://img.shields.io/badge/License-MIT-yellow.svg
