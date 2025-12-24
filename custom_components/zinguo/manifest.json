@@ -1,7 +1,7 @@
 
 {
   "domain": "zinguo",
-  "name": "Zinguo Bathroom",
+  "name": "Zinguo BathHeater",
   "documentation": "https://github.com/jyz0501/hassio-zinguo",
   "dependencies": [],
   "codeowners": ["@jyz0501"],
