@@ -1,11 +1,4 @@
 Zinguo 浴霸 Home Assistant 集成
- 
-https://img.shields.io/badge/HACS-自定义-41BDF5.svg
-https://img.shields.io/github/release/jyz0501/hassio-zinguo.svg
-https://img.shields.io/badge/License-MIT-yellow.svg
-https://img.shields.io/badge/Home%20Assistant-2023.8%2B-blue
-https://img.shields.io/github/stars/jyz0501/hassio-zinguo?style=social
-
 一个完整的 Zinguo 智能浴霸 Home Assistant 集成。通过用户友好的界面和安全凭证存储，提供对您浴霸的完整控制。
 
 📋 目录
@@ -235,14 +228,13 @@ https://raw.githubusercontent.com/jyz0501/hassio-zinguo/main/images/add-integrat
    · 系统会显示配置向导
 
 第二步：输入凭证信息
-
 在配置页面中，需要填写以下信息：
 
 字段 说明 示例 必填
-账户 注册 Zinguo 应用时使用的手机号 18663531366 ✓
-密码 Zinguo 账户的密码 your_password ✓
-MAC 地址 浴霸设备的 MAC 地址 C44F33D86409 ✓
-名称 自定义设备名称 主卫浴霸 ○
+账户 注册 Zinguo 应用时使用的手机号
+密码 Zinguo 账户的密码 
+MAC 地址 浴霸设备的 MAC 地址
+名称 自定义设备名称 主卫浴霸
 
 如何获取 MAC 地址？
 
