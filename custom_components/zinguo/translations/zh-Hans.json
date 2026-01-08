@@ -1,0 +1,21 @@
+// zh-Hans.json
+{
+  "config": {
+    "step": {
+      "user": {
+        "data": {
+          "username": "手机号",
+          "password": "密码",
+          "mac": "设备 MAC 地址"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "无法连接到 Zinguo 服务器",
+      "invalid_auth": "用户名或密码错误",
+      "invalid_mac": "MAC 地址格式无效（应为12位字母数字）",
+      "device_not_found": "账号下未找到该设备",
+      "unknown": "未知错误"
+    }
+  }
+}
