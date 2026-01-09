@@ -3,7 +3,7 @@
 DOMAIN = "zinguo"
 
 # Configuration keys
-CONF_ACCOUNT = "account"
+CONF_USERNAME = "username"
 CONF_PASSWORD = "password"
 CONF_MAC = "mac"
 CONF_NAME = "name"
