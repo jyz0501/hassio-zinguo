@@ -11,7 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
-    CONF_ACCOUNT, 
+    CONF_ACCOUNT,
     CONF_MAC,
     CONF_NAME,
     DOMAIN,
