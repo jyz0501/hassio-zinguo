@@ -1,74 +1,17 @@
-"""Config flow for Zinguo integration."""
-from __future__ import annotations
-
+# config_flow.py
 import logging
 from typing import Any
 
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
-from homeassistant.exceptions import HomeAssistantError
-
-from .const import DOMAIN
-from .api import ZinguoAPI  # 假设原项目有 api.py 或类似认证逻辑
+from homeassistant.exceptions import ConfigEntryNotReady
+from .const import DOMAIN, CONF_USERNAME, CONF_PASSWORD # 导入常量
+from .coordinator import ZinguoDataUpdateCoordinator # 导入协调器
 
 _LOGGER = logging.getLogger(__name__)
-
-# 自定义异常类（必须在函数使用前定义）
-class CannotConnect(HomeAssistantError):
-    """Error to indicate we cannot connect."""
-
-class InvalidAuth(HomeAssistantError):
-    """Error to indicate there is invalid auth."""
-
-class InvalidMAC(HomeAssistantError):
-    """Error to indicate MAC address is invalid."""
-
-class DeviceNotFound(HomeAssistantError):
-    """Error to indicate device not found in account."""
-
-# 配置步骤的 Schema
-STEP_USER_DATA_SCHEMA = vol.Schema(
-    {
-        vol.Required(CONF_USERNAME): str,
-        vol.Required(CONF_PASSWORD): str,
-        vol.Required("mac"): str,
-    }
-)
-
-
-async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
-    """Validate the user input allows us to connect."""
-    username = data[CONF_USERNAME]
-    password = data[CONF_PASSWORD]
-    mac = data["mac"].strip().upper().replace(":", "").replace("-", "")
-
-    if len(mac) != 12:
-        raise InvalidMAC
-
-    # 尝试登录并验证设备是否存在
-    api = ZinguoAPI(username, password)
-    try:
-        await hass.async_add_executor_job(api.login)
-        device = await hass.async_add_executor_job(api.get_device_info, mac)
-        if not device:
-            raise DeviceNotFound
-    except Exception as ex:
-        # 根据异常类型抛出特定错误
-        if "auth" in str(ex).lower():
-            raise InvalidAuth from ex
-        elif "connect" in str(ex).lower() or "timeout" in str(ex).lower():
-            raise CannotConnect from ex
-        else:
-            _LOGGER.error("Zinguo login or device fetch failed: %s", ex)
-            raise CannotConnect from ex
-
-    # 返回用于创建配置条目的信息
-    return {"title": f"Zinguo {mac[-4:]}", "mac": mac}
-
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Zinguo."""
@@ -80,30 +23,85 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> FlowResult:
         """Handle the initial step."""
         errors: dict[str, str] = {}
-
         if user_input is not None:
             try:
-                info = await validate_input(self.hass, user_input)
-            except CannotConnect:
-                errors["base"] = "cannot_connect"
-            except InvalidAuth:
-                errors["base"] = "invalid_auth"
-            except InvalidMAC:
-                errors["base"] = "invalid_mac"
-            except DeviceNotFound:
-                errors["base"] = "device_not_found"
-            except Exception:  # pylint: disable=broad-except
-                _LOGGER.exception("Unexpected exception")
-                errors["base"] = "unknown"
-            else:
-                # 确保不会重复添加同一 MAC
-                await self.async_set_unique_id(info["mac"])
-                self._abort_if_unique_id_configured()
+                # --- 修改开始 ---
+                # 使用协调器中的验证逻辑
+                coordinator = ZinguoDataUpdateCoordinator(
+                    self.hass,
+                    username=user_input[CONF_USERNAME],
+                    password=user_input[CONF_PASSWORD]
+                )
+                # 尝试初始化协调器，这会触发登录和获取设备信息
+                await coordinator.async_config_entry_first_refresh()
 
-                return self.async_create_entry(title=info["title"], data=user_input)
+                # 验证成功，获取设备名称作为标题
+                title = coordinator.name # 或者 coordinator.device_name
+
+                # --- 修改结束 ---
+
+                return self.async_create_entry(title=title, data=user_input)
+            except Exception as ex: # 可以捕获更具体的异常
+                _LOGGER.error("Config validation failed: %s", ex)
+                errors["base"] = "cannot_connect"
 
         return self.async_show_form(
             step_id="user",
-            data_schema=STEP_USER_DATA_SCHEMA,
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_USERNAME): str,
+                    vol.Required(CONF_PASSWORD): str,
+                }
+            ),
+            errors=errors,
+        )
+
+    # 如果需要重新配置
+    async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+        """Handle reconfiguration."""
+        errors: dict[str, str] = {}
+        # 获取当前条目的 ID，以便稍后更新
+        entry = self.hass.config_entries.async_get_entry(self.context["entry_id"])
+
+        if user_input is not None:
+            try:
+                # --- 修改开始 ---
+                # 使用协调器中的验证逻辑
+                coordinator = ZinguoDataUpdateCoordinator(
+                    self.hass,
+                    username=user_input[CONF_USERNAME],
+                    password=user_input[CONF_PASSWORD]
+                )
+                # 尝试初始化协调器
+                await coordinator.async_config_entry_first_refresh()
+
+                title = coordinator.name # 或者 coordinator.device_name
+                # --- 修改结束 ---
+
+                # 更新现有条目
+                self.hass.config_entries.async_update_entry(
+                    entry, data=user_input, title=title
+                )
+                # 重新加载集成
+                await self.hass.config_entries.async_reload(entry.entry_id)
+
+                return self.async_abort(reason="reconfigure_successful")
+
+            except Exception as ex:
+                _LOGGER.error("Reconfig validation failed: %s", ex)
+                errors["base"] = "cannot_connect"
+
+        # 显示带有当前值的表单
+        current_username = entry.data.get(CONF_USERNAME, "")
+        current_password = entry.data.get(CONF_PASSWORD, "")
+
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_USERNAME, default=current_username): str,
+                    vol.Required(CONF_PASSWORD, default=current_password): str,
+                }
+            ),
             errors=errors,
         )
