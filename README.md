@@ -1,5 +1,6 @@
 # Zinguo 浴霸 Home Assistant 集成
-
+![Version](https://img.shields.io/badge/version-v1.0.0-blue)
+![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)
 ## 项目简介
 
 一个完整的 Zinguo 智能浴霸 Home Assistant 集成，通过用户友好界面和安全凭证存储，提供对浴霸的全面控制。
