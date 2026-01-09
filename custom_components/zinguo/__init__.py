@@ -30,7 +30,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     account = entry.data[CONF_USERNAME]
     password = entry.data[CONF_PASSWORD]
     mac = entry.data[CONF_MAC]
-    name = entry.data.get(CONF_NAME, "Zinguo Bathroom Fan")
+    name = entry.data.get(CONF_NAME, "Zinguo Bathroom Heater")
 
     coordinator = ZinguoDataUpdateCoordinator(
         hass, account, password, mac, name
