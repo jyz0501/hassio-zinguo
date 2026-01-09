@@ -1,5 +1,5 @@
 # Zinguo 浴霸 Home Assistant 集成
-![Version](https://img.shields.io/badge/version-v1.0.0-blue)
+![Version](https://img.shields.io/badge/version-v1.1.0-blue)
 ![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)
 ## 项目简介
 
