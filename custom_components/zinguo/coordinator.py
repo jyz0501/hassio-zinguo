@@ -366,41 +366,57 @@ class ZinguoDataUpdateCoordinator(DataUpdateCoordinator):
             else:
                 converted_payload[key] = value
 
-        # 获取当前设备状态，作为控制命令的基础
-        current_status = {
-            "warmingSwitch1": 0,
-            "warmingSwitch2": 0,
-            "windSwitch": 0,
-            "lightSwitch": 0,
-            "ventilationSwitch": 0,
-            "turnOffAll": 0
-        }
-        
-        # 如果有当前设备数据，使用当前状态作为默认值，避免开关互斥
-        if hasattr(self, 'data') and self.data:
-            # 将布尔值转换为1/0
-            status_map = {True: 1, False: 0}
-            current_status.update({
-                "warmingSwitch1": status_map.get(self.data.get("warmingSwitch1"), 0),
-                "warmingSwitch2": status_map.get(self.data.get("warmingSwitch2"), 0),
-                "windSwitch": status_map.get(self.data.get("windSwitch"), 0),
-                "lightSwitch": status_map.get(self.data.get("lightSwitch"), 0),
-                "ventilationSwitch": status_map.get(self.data.get("ventilationSwitch"), 0),
-                "turnOffAll": 0
-            })
+        # Determine if this is a parameter setting command
+        # Parameter keys based on the HAR log
+        param_keys = ["ventilationAutoClose", "warmingAutoClose", "overHeatAutoClose", "lightAutoClose", "comovement", "motoVersion"]
+        is_param_command = any(key in converted_payload for key in param_keys)
 
-        # 根据抓包数据，控制命令需要包含完整的开关状态
-        # 使用当前设备状态作为默认值，只修改需要修改的开关
+        # Get current device data if available
+        current_data = self.data if hasattr(self, 'data') and self.data else {}
+        
+        # Build control payload based on command type
         control_payload = {
             "mac": self.mac,
             "masterUser": self.username,
-            "setParamter": False,
-            "action": False,
-            # 使用当前设备状态作为默认值
-            **current_status,
-            # 合并转换后的payload，覆盖需要修改的开关
-            **converted_payload
+            "setParamter": is_param_command,
+            "action": False
         }
+        
+        if is_param_command:
+            # For parameter commands, include necessary param fields from current data or defaults
+            control_payload.update({
+                "comovement": current_data.get("comovement", 3),
+                "motoVersion": current_data.get("motoVersion", 2),
+                # Include the parameter being set
+                **converted_payload
+            })
+        else:
+            # For switch commands, include complete switch status
+            current_status = {
+                "warmingSwitch1": 0,
+                "warmingSwitch2": 0,
+                "windSwitch": 0,
+                "lightSwitch": 0,
+                "ventilationSwitch": 0,
+                "turnOffAll": 0
+            }
+            
+            if current_data:
+                # Update with current switch states
+                status_map = {True: 1, False: 0}
+                current_status.update({
+                    "warmingSwitch1": status_map.get(current_data.get("warmingSwitch1"), 0),
+                    "warmingSwitch2": status_map.get(current_data.get("warmingSwitch2"), 0),
+                    "windSwitch": status_map.get(current_data.get("windSwitch"), 0),
+                    "lightSwitch": status_map.get(current_data.get("lightSwitch"), 0),
+                    "ventilationSwitch": status_map.get(current_data.get("ventilationSwitch"), 0),
+                    "turnOffAll": 0
+                })
+            
+            control_payload.update({
+                **current_status,
+                **converted_payload
+            })
 
         _LOGGER.debug("Sending control command: %s", control_payload)
 
