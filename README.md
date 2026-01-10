@@ -1,6 +1,13 @@
 # Zinguo 浴霸 Home Assistant 集成
 ![Version](https://img.shields.io/github/v/tag/jyz0501/hassio-zinguo?label=version&color=blue)
 ![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)
+## 🔄 近期更新
+
+### ✨ 新增功能
+
+* **滑块输入支持**：新增滑块输入控件，比传统 number 控件更直观方便
+* **多 API 端点自动选择**：系统会自动检测并选择可用的 API 端点，提高连接稳定性
+
 ## 项目简介
 
 一个完整的 Zinguo 智能浴霸 Home Assistant 集成，通过用户友好界面和安全凭证存储，提供对浴霸的全面控制。
@@ -426,6 +433,7 @@ icon_color: |
 | 配置时提示"无法连接到设备" | MAC 错误/账户密码错误/设备离线/网络问题 | 确认 MAC（12位大写）；用 App 测试账户；检查设备在线；检查网络                        |
 | 实体状态不更新             | 设备离线/API 令牌过期/网络不稳定        | 检查在线状态传感器；删除集成后重加；检查网络                                         |
 | 控制指令执行失败           | 设备未响应/API 限制/并发控制            | 等待几秒重试；检查设备是否繁忙；避免频繁发指令                                       |
+| 按键之间存在互斥问题       | 开关联动逻辑问题                        | 尝试不同的操作顺序；等待修复更新；欢迎提交 PR 帮助解决                                 |
 
 ### 错误代码
 
@@ -476,17 +484,19 @@ tar -czf zinguo-backup-$(date +%Y%m%d).tar.gz \
 
 ### API 接口
 
-* ​**认证**​：POST `https://iot.zinguo.com/api/v1/customer/login`（参数：{"account":"手机号","password":"密码"}）
-* ​**设备状态查询**​：GET `https://iot.zinguo.com/api/v1/customer/devices`（头部：x-access-token: [令牌]）
-* ​**设备控制**​：PUT `https://iot.zinguo.com/api/v1/wifiyuba/yuBaControl`（头部：x-access-token: [令牌]，参数：含 MAC 和控制指令的 JSON）
+* **多端点支持**：系统会自动检测并选择可用的 API 端点
+* **认证**：POST `/customer/login`（参数：{"account":"手机号","password":"密码"}）
+* **设备状态查询**：GET `/customer/devices`（头部：x-access-token: [令牌]）
+* **设备控制**：PUT `/wifiyuba/yuBaControl`（头部：x-access-token: [令牌]，参数：含 MAC 和控制指令的 JSON）
 
 ### 工作原理
 
-1. 认证：用账户密码获取访问令牌
-2. 设备发现：查询账户设备，按 MAC 匹配
-3. 状态轮询：每5分钟查询一次状态
-4. 控制指令：发送指令后立即刷新状态
-5. 错误处理：令牌过期时自动重新认证
+1. **端点检测**：自动测试多个 API 端点，选择可用的端点
+2. 认证：用账户密码获取访问令牌
+3. 设备发现：查询账户设备，按 MAC 匹配
+4. 状态轮询：每30秒查询一次状态
+5. 控制指令：发送指令后立即刷新状态
+6. 错误处理：令牌过期时自动重新认证，端点不可用时自动切换
 
 ### 安全机制
 
@@ -513,6 +523,14 @@ tar -czf zinguo-backup-$(date +%Y%m%d).tar.gz \
 
 1. Fork 仓库 → 创建功能分支 → 提交变更 → 创建 Pull Request
 2. 代码规范：遵循 Python PEP 8，添加类型注解、文档注释，包含测试用例
+3. **特别欢迎**：关于按键互斥问题的修复 PR，期待各位大佬的贡献！
+
+### 提交 PR 指南
+
+- 确保代码通过所有测试
+- 提供清晰的 PR 描述和问题修复说明
+- 遵循项目现有的代码风格
+- 为新功能添加适当的文档
 
 ## 📄 许可证
 
