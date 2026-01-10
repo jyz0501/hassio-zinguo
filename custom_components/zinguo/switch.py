@@ -31,6 +31,7 @@ async def async_setup_entry(
     entities.append(ZinguoWarmingSwitch1(coordinator, device_info))
     entities.append(ZinguoWarmingSwitch2(coordinator, device_info))
     entities.append(ZinguoWindSwitch(coordinator, device_info))
+    entities.append(ZinguoVentilationSwitch(coordinator, device_info))
 
     async_add_entities(entities)
 
@@ -100,6 +101,11 @@ class ZinguoWarmingSwitch2(ZinguoSwitchBase):
 class ZinguoWindSwitch(ZinguoSwitchBase):
     def __init__(self, coordinator: ZinguoDataUpdateCoordinator, device_info: dict[str, Any]):
         super().__init__(coordinator, device_info, "windSwitch", "吹风")
+
+
+class ZinguoVentilationSwitch(ZinguoSwitchBase):
+    def __init__(self, coordinator: ZinguoDataUpdateCoordinator, device_info: dict[str, Any]):
+        super().__init__(coordinator, device_info, "ventilationSwitch", "换气")
 
 
 
