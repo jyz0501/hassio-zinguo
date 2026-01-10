@@ -8,7 +8,7 @@ from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import ConfigEntryNotReady
-from .const import DOMAIN, CONF_USERNAME, CONF_PASSWORD # 导入常量
+from .const import DOMAIN, CONF_USERNAME, CONF_PASSWORD, CONF_MAC, CONF_NAME # 导入常量
 from .coordinator import ZinguoDataUpdateCoordinator # 导入协调器
 
 _LOGGER = logging.getLogger(__name__)
@@ -25,22 +25,38 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         if user_input is not None:
             try:
-                # --- 修改开始 ---
-                # 使用协调器中的验证逻辑
+                # 使用协调器获取设备列表
                 coordinator = ZinguoDataUpdateCoordinator(
                     self.hass,
                     username=user_input[CONF_USERNAME],
                     password=user_input[CONF_PASSWORD]
                 )
-                # 尝试初始化协调器，这会触发登录和获取设备信息
-                await coordinator.async_config_entry_first_refresh()
-
-                # 验证成功，获取设备名称作为标题
-                title = coordinator.name # 或者 coordinator.device_name
-
-                # --- 修改结束 ---
-
-                return self.async_create_entry(title=title, data=user_input)
+                # 获取设备列表
+                try:
+                    devices = await coordinator.async_get_devices()
+                    _LOGGER.debug("Got devices: %s", devices)
+                except Exception as ex:
+                    _LOGGER.error("Failed to get devices: %s", ex, exc_info=True)
+                    raise
+                
+                # 保存凭据以便后续步骤使用
+                self._credentials = user_input
+                
+                # 如果只有一个设备，直接选择
+                if len(devices) == 1:
+                    device = devices[0]
+                    return self.async_create_entry(
+                        title=device.get("name", "Zinguo Device"),
+                        data={
+                            **user_input,
+                            CONF_MAC: device.get("mac"),
+                            CONF_NAME: device.get("name", "Zinguo Device")
+                        }
+                    )
+                
+                # 否则进入设备选择步骤
+                self._devices = devices
+                return await self.async_step_device()
             except Exception as ex: # 可以捕获更具体的异常
                 _LOGGER.error("Config validation failed: %s", ex)
                 errors["base"] = "cannot_connect"
@@ -51,6 +67,45 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 {
                     vol.Required(CONF_USERNAME): str,
                     vol.Required(CONF_PASSWORD): str,
+                }
+            ),
+            errors=errors,
+        )
+    
+    async def async_step_device(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Handle device selection step."""
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            # 获取选中的设备
+            device_id = user_input["device"]
+            selected_device = next((d for d in self._devices if d["_id"] == device_id), None)
+            
+            if selected_device:
+                return self.async_create_entry(
+                    title=selected_device.get("name", "Zinguo Device"),
+                    data={
+                        **self._credentials,
+                        CONF_MAC: selected_device.get("mac"),
+                        CONF_NAME: selected_device.get("name", "Zinguo Device")
+                    }
+                )
+            
+            errors["base"] = "invalid_device"
+        
+        # 创建设备选择选项
+        device_options = {}
+        for device in self._devices:
+            device_id = device["_id"]
+            device_name = f"{device.get('name', 'Unknown')} ({device.get('mac', 'No MAC')})"
+            device_options[device_id] = device_name
+        
+        return self.async_show_form(
+            step_id="device",
+            data_schema=vol.Schema(
+                {
+                    vol.Required("device"): vol.In(device_options),
                 }
             ),
             errors=errors,
