@@ -64,17 +64,27 @@ class ZinguoFan(CoordinatorEntity, FanEntity):
             warming2_on = device_status.get('warmingSwitch2', False)
             wind_on = device_status.get('windSwitch', False)
             
-            # Determine initial preset mode and is_on state
-            if warming1_on and not warming2_on and not wind_on:
-                self._attr_preset_mode = "暖风 1"
-                self._attr_is_on = True
-            elif warming2_on and not warming1_on and not wind_on:
-                self._attr_preset_mode = "暖风 2"
-                self._attr_is_on = True
-            elif wind_on and not warming1_on and not warming2_on:
-                self._attr_preset_mode = "吹风"
-                self._attr_is_on = True
+            # Check if any of the switches is on
+            any_on = warming1_on or warming2_on or wind_on
+            
+            # Set is_on based on any switch being on
+            self._attr_is_on = any_on
+            
+            # Determine preset mode based on priority if multiple switches are on
+            if any_on:
+                # If multiple modes are active, use priority order: 暖风1 > 暖风2 > 吹风
+                if warming1_on:
+                    self._attr_preset_mode = "暖风 1"
+                elif warming2_on:
+                    self._attr_preset_mode = "暖风 2"
+                elif wind_on:
+                    self._attr_preset_mode = "吹风"
+                else:
+                    # Fallback if any_on is True but no specific switch is detected
+                    self._attr_preset_mode = "关闭"
+                    self._attr_is_on = False
             else:
+                # All switches are off
                 self._attr_preset_mode = "关闭"
                 self._attr_is_on = False
         else:
@@ -94,16 +104,27 @@ class ZinguoFan(CoordinatorEntity, FanEntity):
         warming2_on = device_status.get('warmingSwitch2', False)
         wind_on = device_status.get('windSwitch', False)
 
-        if warming1_on and not warming2_on and not wind_on:
-            self._attr_preset_mode = "暖风 1"
-            self._attr_is_on = True
-        elif warming2_on and not warming1_on and not wind_on:
-            self._attr_preset_mode = "暖风 2"
-            self._attr_is_on = True
-        elif wind_on and not warming1_on and not warming2_on:
-            self._attr_preset_mode = "吹风"
-            self._attr_is_on = True
+        # Check if any of the switches is on
+        any_on = warming1_on or warming2_on or wind_on
+        
+        # Set is_on based on any switch being on
+        self._attr_is_on = any_on
+        
+        # Determine preset mode based on priority if multiple switches are on
+        if any_on:
+            # If multiple modes are active, use priority order: 暖风1 > 暖风2 > 吹风
+            if warming1_on:
+                self._attr_preset_mode = "暖风 1"
+            elif warming2_on:
+                self._attr_preset_mode = "暖风 2"
+            elif wind_on:
+                self._attr_preset_mode = "吹风"
+            else:
+                # Fallback if any_on is True but no specific switch is detected
+                self._attr_preset_mode = "关闭"
+                self._attr_is_on = False
         else:
+            # All switches are off
             self._attr_preset_mode = "关闭"
             self._attr_is_on = False
 
