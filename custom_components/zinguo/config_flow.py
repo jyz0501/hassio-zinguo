@@ -127,15 +127,30 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     username=user_input[CONF_USERNAME],
                     password=user_input[CONF_PASSWORD]
                 )
-                # 尝试初始化协调器
-                await coordinator.async_config_entry_first_refresh()
-
-                title = coordinator.name # 或者 coordinator.device_name
+                # 验证凭据：尝试获取设备列表
+                devices = await coordinator.async_get_devices()
+                
+                # 如果有设备，使用第一个设备的信息
+                if devices:
+                    title = devices[0].get("name", "Zinguo Device")
+                    mac = devices[0].get("mac")
+                    name = devices[0].get("name", "Zinguo Device")
+                else:
+                    title = "Zinguo Device"
+                    # 保留原有设备的mac和name
+                    mac = entry.data.get(CONF_MAC, "")
+                    name = entry.data.get(CONF_NAME, "Zinguo Device")
                 # --- 修改结束 ---
 
-                # 更新现有条目
+                # 更新现有条目，包含所有必要字段
                 self.hass.config_entries.async_update_entry(
-                    entry, data=user_input, title=title
+                    entry, 
+                    data={
+                        **user_input,
+                        CONF_MAC: mac,
+                        CONF_NAME: name
+                    }, 
+                    title=title
                 )
                 # 重新加载集成
                 await self.hass.config_entries.async_reload(entry.entry_id)
