@@ -48,8 +48,8 @@ class ZinguoFan(CoordinatorEntity, FanEntity):
         device_name = coordinator.name[:32] if coordinator.name else "Zinguo"
         self._attr_name = f"{device_name} 浴霸"
         self._attr_preset_modes = PRESET_MODES
-        # 添加对预设模式的支持
-        self._attr_supported_features = FanEntityFeature.PRESET_MODE
+        # 添加对预设模式、开关功能的支持
+        self._attr_supported_features = FanEntityFeature.PRESET_MODE | FanEntityFeature.TURN_ON | FanEntityFeature.TURN_OFF
         self._attr_device_info = {
             "identifiers": {(DOMAIN, device_info["id"])},
             "name": device_name, # Use coordinator's determined name
