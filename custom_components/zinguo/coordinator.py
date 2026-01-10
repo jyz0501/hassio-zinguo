@@ -432,12 +432,32 @@ class ZinguoDataUpdateCoordinator(DataUpdateCoordinator):
             if response.status == 200:
                 _LOGGER.debug("Control command sent successfully.")
                 
-                # Don't use the device status from response, it's incomplete and has different format
-                # Instead, refresh the data to get complete and accurate status including temperature
-                # Update self.data with the fresh data
-                self.data = await self._async_update_data()
-                # Notify all listeners of the update
-                self.async_update_listeners()
+                # First, optimistically update the local state with the requested changes
+                # This provides immediate feedback to the user
+                optimistic_update = False
+                if self.data:
+                    updated_data = self.data.copy()
+                    for key, value in converted_payload.items():
+                        if key in updated_data:
+                            updated_data[key] = value == 1
+                            optimistic_update = True
+                    if optimistic_update:
+                        self.data = updated_data
+                        self.async_update_listeners()
+                
+                # Then, after a short delay, refresh from the actual device to ensure accuracy
+                # This handles the case where the device might take time to process the command
+                import asyncio
+                await asyncio.sleep(0.5)
+                
+                # Refresh data from device to get the actual state
+                actual_data = await self._async_update_data()
+                
+                # Only update and notify listeners if the actual state differs from our cached state
+                if actual_data != self.data:
+                    self.data = actual_data
+                    self.async_update_listeners()
+                
                 return True
             elif response.status == 401:
                 # Token expired, re-login and retry once
@@ -466,12 +486,30 @@ class ZinguoDataUpdateCoordinator(DataUpdateCoordinator):
                     if retry_resp.status == 200:
                         _LOGGER.debug("Control command sent successfully after re-login.")
                         
-                        # Don't use the device status from response, it's incomplete and has different format
-                        # Instead, refresh the data to get complete and accurate status including temperature
-                        # Update self.data with the fresh data
-                        self.data = await self._async_update_data()
-                        # Notify all listeners of the update
-                        self.async_update_listeners()
+                        # First, optimistically update the local state with the requested changes
+                        optimistic_update = False
+                        if self.data:
+                            updated_data = self.data.copy()
+                            for key, value in converted_payload.items():
+                                if key in updated_data:
+                                    updated_data[key] = value == 1
+                                    optimistic_update = True
+                            if optimistic_update:
+                                self.data = updated_data
+                                self.async_update_listeners()
+                        
+                        # Then, after a short delay, refresh from the actual device to ensure accuracy
+                        import asyncio
+                        await asyncio.sleep(0.5)
+                        
+                        # Refresh data from device to get the actual state
+                        actual_data = await self._async_update_data()
+                        
+                        # Only update and notify listeners if the actual state differs from our cached state
+                        if actual_data != self.data:
+                            self.data = actual_data
+                            self.async_update_listeners()
+                        
                         return True
                     else:
                         _LOGGER.error("Control command failed after re-login, status %d: %s", retry_resp.status, retry_text_response)
