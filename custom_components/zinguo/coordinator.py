@@ -357,12 +357,13 @@ class ZinguoDataUpdateCoordinator(DataUpdateCoordinator):
             "Connection": "keep-alive"
         }
 
-        # Convert boolean values to 1/0 format according to user requirement
+        # Convert boolean values to device API format
+        # According to _process_device_data, device uses: 1 = ON, 2 = OFF
         converted_payload = {}
         for key, value in payload.items():
-            # Convert boolean to 1/0
+            # Convert boolean to device API format
             if isinstance(value, bool):
-                converted_payload[key] = 1 if value else 0
+                converted_payload[key] = 1 if value else 2  # 1=ON, 2=OFF
             else:
                 converted_payload[key] = value
 
@@ -407,13 +408,14 @@ class ZinguoDataUpdateCoordinator(DataUpdateCoordinator):
             # Always use the latest cached data to maintain current state
             # This is crucial to prevent unexpected switch behavior
             if current_data:
-                # Convert boolean states to API format (True -> 1, False -> 0)
+                # Convert boolean states to device API format (True -> 1, False -> 2)
+                # Important: Device expects 2 for OFF, not 0
                 current_status = {
-                    "warmingSwitch1": 1 if current_data.get("warmingSwitch1") else 0,
-                    "warmingSwitch2": 1 if current_data.get("warmingSwitch2") else 0,
-                    "windSwitch": 1 if current_data.get("windSwitch") else 0,
-                    "lightSwitch": 1 if current_data.get("lightSwitch") else 0,
-                    "ventilationSwitch": 1 if current_data.get("ventilationSwitch") else 0,
+                    "warmingSwitch1": 1 if current_data.get("warmingSwitch1") else 2,
+                    "warmingSwitch2": 1 if current_data.get("warmingSwitch2") else 2,
+                    "windSwitch": 1 if current_data.get("windSwitch") else 2,
+                    "lightSwitch": 1 if current_data.get("lightSwitch") else 2,
+                    "ventilationSwitch": 1 if current_data.get("ventilationSwitch") else 2,
                     "turnOffAll": 0
                 }
             
