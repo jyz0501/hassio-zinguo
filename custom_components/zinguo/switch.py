@@ -27,6 +27,7 @@ async def async_setup_entry(
 
     entities = []
     # 创建开关实体，传入协调器对象
+    entities.append(ZinguoLightSwitch(coordinator, device_info))
     entities.append(ZinguoWarmingSwitch1(coordinator, device_info))
     entities.append(ZinguoWarmingSwitch2(coordinator, device_info))
     entities.append(ZinguoWindSwitch(coordinator, device_info))
@@ -43,25 +44,29 @@ class ZinguoSwitchBase(CoordinatorEntity, SwitchEntity):
         self._device_info = device_info
         self._control_key = control_key
         self._attr_unique_id = f"{device_info['id']}_{control_key}" # Construct unique_id
-        self._attr_name = f"Zinguo {name_suffix}"
+        self._attr_name = name_suffix
+        # 限制设备名称长度，避免实体名称过长
+        device_name = coordinator.name[:32] if coordinator.name else "Zinguo"
         self._attr_device_info = {
             "identifiers": {(DOMAIN, device_info["id"])},
-            "name": coordinator.name, # Use coordinator's determined name
+            "name": device_name, # Use coordinator's determined name
             "manufacturer": "Zinguo",
-            "model": device_info.get("device_model", "Unknown Model"), # Use model from device_info
-            "sw_version": device_info.get("firmware_version", "Unknown Version"), # Use firmware version if available
+            "model": device_info.get("deviceModel", "智能浴霸"), # Use model from device_info
+            "sw_version": device_info.get("firmwareVersion", "Unknown Version"), # Use firmware version if available
         }
+        # Initialize state from coordinator's data if available
+        if coordinator.data:
+            self._attr_is_on = coordinator.data.get(self._control_key, False)
+        else:
+            self._attr_is_on = False
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
         # 根据协调器的最新数据更新开关状态
         device_status = self.coordinator.data # Get fresh data
-        # Assuming device_status has a 'status' key with control details
-        status_details = device_status.get('status', {})
-        # Map control_key to actual state in status_details if structure differs
-        # Example: if status_details['warming_switch_1'] exists and is boolean
-        self._attr_is_on = status_details.get(self._control_key, False)
+        # Device status is directly in the root of the data dictionary
+        self._attr_is_on = device_status.get(self._control_key, False)
         self.async_write_ha_state() # Notify HA of state change
 
     async def async_turn_on(self, **kwargs: Any) -> None:
@@ -77,18 +82,24 @@ class ZinguoSwitchBase(CoordinatorEntity, SwitchEntity):
         # 状态更新由协调器的强制刷新处理
 
 
+class ZinguoLightSwitch(ZinguoSwitchBase):
+    def __init__(self, coordinator: ZinguoDataUpdateCoordinator, device_info: dict[str, Any]):
+        super().__init__(coordinator, device_info, "lightSwitch", "照明")
+
+
 class ZinguoWarmingSwitch1(ZinguoSwitchBase):
     def __init__(self, coordinator: ZinguoDataUpdateCoordinator, device_info: dict[str, Any]):
-        super().__init__(coordinator, device_info, "warming_switch_1", "Warming Switch 1")
+        super().__init__(coordinator, device_info, "warmingSwitch1", "暖风 1")
 
 
 class ZinguoWarmingSwitch2(ZinguoSwitchBase):
     def __init__(self, coordinator: ZinguoDataUpdateCoordinator, device_info: dict[str, Any]):
-        super().__init__(coordinator, device_info, "warming_switch_2", "Warming Switch 2")
+        super().__init__(coordinator, device_info, "warmingSwitch2", "暖风 2")
 
 
 class ZinguoWindSwitch(ZinguoSwitchBase):
     def __init__(self, coordinator: ZinguoDataUpdateCoordinator, device_info: dict[str, Any]):
-        # --- 修正 unique_id ---
-        super().__init__(coordinator, device_info, "wind_switch", "Wind Switch") # Changed control_key to "wind_switch"
-        # The unique_id is now correctly f"{device_info['id']}_wind_switch"
+        super().__init__(coordinator, device_info, "windSwitch", "吹风")
+
+
+
